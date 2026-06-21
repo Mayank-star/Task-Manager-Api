@@ -90,13 +90,22 @@ exports.updateTask = async (req, res) => {
       });
     }
 
+    const validStatus = ["pending", "completed"];
+
+    if (status && !validStatus.includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid status",
+      });
+    }
+
     const [tasks] = await db.query(
       `SELECT * FROM tasks WHERE id = ? and user_id = ?`,
       [taskId, req.user.id],
     );
 
     if (tasks.length === 0) {
-      return res.status(400).json({
+      return res.status(404).json({
         success: false,
         message: "Task not found",
       });
@@ -119,8 +128,42 @@ exports.updateTask = async (req, res) => {
       message: "Task Updated",
     });
   } catch (error) {
+    // console.log(error);
+
+    res.status(500).json({
+      success: false,
+      message: "Server Error",
+    });
+  }
+};
+
+exports.deleteTask = async (req, res) => {
+  try {
+    const taskId = req.params.id;
+
+    const [result] = await db.query(
+            `
+        DELETE FROM tasks
+        WHERE id = ?
+        AND user_id = ?
+        `,
+      [taskId, req.user.id],
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Task not found",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Task Deleted",
+    });
+  } catch (error) {
     console.log(error);
-    
+
     res.status(500).json({
       success: false,
       message: "Server Error",
