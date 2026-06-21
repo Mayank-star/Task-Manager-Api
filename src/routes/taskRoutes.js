@@ -12,7 +12,7 @@ const {
   "../controllers/taskController.js"
 );
 
-router.get(
+router.post(
   "/",
   authMiddleware,
   createTask
