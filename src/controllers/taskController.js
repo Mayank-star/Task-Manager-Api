@@ -27,3 +27,25 @@ exports.createTask = async (req, res) => {
     });
   }
 };
+
+exports.getAllTasks = async (req, res) => {
+  try {
+    const [tasks] = await db.query(
+      `SELECT * FROM TASKS WHERE user_id = ?
+       ORDER BY created_at DESC 
+      `,
+      [req.user.id],
+    );
+
+    return res.status(200).json({
+      success: true,
+      count: tasks.length,
+      tasks,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Server Error",
+    });
+  }
+};

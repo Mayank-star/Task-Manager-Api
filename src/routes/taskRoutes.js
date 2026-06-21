@@ -8,6 +8,7 @@ const authMiddleware =
 
 const {
   createTask,
+  getAllTasks
 } = require(
   "../controllers/taskController.js"
 );
@@ -16,6 +17,12 @@ router.post(
   "/",
   authMiddleware,
   createTask
+);
+
+router.get(
+  "/",
+  authMiddleware,
+  getAllTasks
 );
 
 module.exports = router;
