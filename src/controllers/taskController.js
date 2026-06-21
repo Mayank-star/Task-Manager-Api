@@ -49,3 +49,32 @@ exports.getAllTasks = async (req, res) => {
     });
   }
 };
+
+exports.getTaskById = async (req, res) => {
+  const taskId = req.params.id;
+  console.log(taskId);
+  try {
+    const [tasks] = await db.query(
+      `SELECT * FROM tasks WHERE id = ?
+       AND user_id = ? 
+      `,
+      [taskId, req.user.id],
+    );
+    if (tasks.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Task not found",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      tasks,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Server Error",
+    });
+  }
+};
