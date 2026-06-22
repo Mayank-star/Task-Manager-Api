@@ -10,8 +10,10 @@ const {
   updateTask,
   deleteTask,
 } = require("../controllers/taskController.js");
+const { createTaskValidation } = require("../validations/taskValidation.js");
+const validationMiddleware = require("../middleware/validationMiddleware.js");
 
-router.post("/", authMiddleware, createTask);
+router.post("/", authMiddleware, createTaskValidation,validationMiddleware, createTask);
 router.get("/", authMiddleware, getAllTasks);
 router.get("/:id", authMiddleware, getTaskById);
 router.put("/:id", authMiddleware, updateTask);
