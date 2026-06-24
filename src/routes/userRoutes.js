@@ -11,11 +11,20 @@ const {
 } = require(
   "../controllers/userController.js"
 );
+const roleMiddleware = require("../middleware/roleMiddleware.js");
 
 router.get(
   "/profile",
   authMiddleware,
   getProfile
 );
+
+router.delete(
+  "/users/:id",
+  authMiddleware,
+  roleMiddleware('admin'),
+  getProfile
+);
+
 
 module.exports = router;

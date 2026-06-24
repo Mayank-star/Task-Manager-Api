@@ -73,6 +73,7 @@ exports.login = async (req, res) => {
     const signPayload = {
       id: user.id,
       email: user.email,
+      role:user.role
     };
 
     const accessToken = jwt.sign(signPayload, process.env.JWT_SECRET, {
@@ -97,6 +98,7 @@ exports.login = async (req, res) => {
         id: user.id,
         name: user.name,
         email: user.email,
+        role:user.role,
       },
     });
   } catch (error) {
@@ -138,6 +140,7 @@ exports.refreshToken = async (req, res) => {
     const signPayload = {
       id: user.id,
       email: user.email,
+      role:user.role
     };
 
     if (user?.refresh_token !== refreshToken) {
