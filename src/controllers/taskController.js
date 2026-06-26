@@ -1,7 +1,7 @@
 const db = require("../config/db");
-const taskService = require(
-  "../services/taskService"
-);
+const redisClient = require("../config/redis");
+const taskService = require("../services/taskService");
+const { clearUserTaskCache } = require("../utils/cache");
 
 // exports.createTask = async (req, res) => {
 //   try {
@@ -30,33 +30,19 @@ const taskService = require(
 //     });
 //   }
 // };
-exports.createTask = async (
-  req,
-  res,
-  next
-) => {
+exports.createTask = async (req, res, next) => {
   try {
+    const { title, description } = req.body;
 
-    const {
-      title,
-      description,
-    } = req.body;
-
-    await taskService.createTask(
-      title,
-      description,
-      req.user.id
-    );
+    await taskService.createTask(title, description, req.user.id);
+    await clearUserTaskCache(req.user.id);
 
     return res.status(201).json({
       success: true,
       message: "Task Created",
     });
-
   } catch (error) {
-
     next(error);
-
   }
 };
 
@@ -67,6 +53,25 @@ exports.getAllTasks = async (req, res) => {
     const search = req.query.search || "";
     const status = req.query.status || "";
     const offset = (page - 1) * limit;
+
+    // Cache key (unique for every user + filters)
+    const cacheKey = `tasks:${req.user.id}:${page}:${limit}:${search}:${status}`;
+    // ============================
+    // 1. Check Redis Cache
+    // ============================
+    const cachedData = await redisClient.get(cacheKey);
+    const data = JSON.parse(cachedData);
+    // console.log("cachedData", data);
+
+    if (cachedData) {
+      console.log("Cache Hit");
+
+      return res.status(200).json({
+        ...data,
+        source: "Redis",
+      });
+    }
+    console.log("Cache Miss");
 
     let query = `SELECT * FROM tasks WHERE user_id = ?`;
     const values = [req.user.id];
@@ -100,24 +105,35 @@ exports.getAllTasks = async (req, res) => {
     values.push(offset);
 
     const [tasks] = await db.query(query, values);
-    const [[countResult]] = await db.query(countQuery,countValues);
+    const [[countResult]] = await db.query(countQuery, countValues);
     const totalRecords = countResult.total;
     const totalPages = Math.ceil(totalRecords / limit);
     // console.log(query)
     // console.log(req.query);
     // console.log("status =>", status);
-    return res.status(200).json({
+    const response = {
       success: true,
+      source: "Database",
       currentPage: page,
+      limit,
       totalRecords,
       totalPages,
       hasNextPage: page < totalPages,
       hasPreviousPage: page > 1,
-      limit,
       tasks,
+    };
+
+    // ============================
+    // 4. Save to Redis (60 sec)
+    // ============================
+
+    await redisClient.set(cacheKey, JSON.stringify(response), {
+      EX: 60,
     });
+
+    return res.status(200).json(response);
   } catch (error) {
-      console.log(error);
+    console.log(error);
     res.status(500).json({
       success: false,
       message: "Server Error",
@@ -198,6 +214,9 @@ exports.updateTask = async (req, res) => {
       [title, description, status, taskId],
     );
 
+    // Clear Cache
+    await clearUserTaskCache(req.user.id);
+
     return res.status(200).json({
       success: true,
       message: "Task Updated",
@@ -231,6 +250,9 @@ exports.deleteTask = async (req, res) => {
         message: "Task not found",
       });
     }
+
+    // Clear Cache
+    await clearUserTaskCache(req.user.id);
 
     return res.status(200).json({
       success: true,
