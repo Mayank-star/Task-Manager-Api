@@ -14,8 +14,7 @@ const worker = new Worker(
 
   {
     connection: {
-      host: process.env.HOST,
-      port: process.env.QUEUE_PORT,
+       url: process.env.REDIS_URL,
     },
   }
 
