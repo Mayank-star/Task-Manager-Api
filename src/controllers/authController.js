@@ -1,6 +1,7 @@
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const db = require("../config/db");
+const { addWelcomeEmailJob } = require("../jobs/emailJob");
 
 exports.register = async (req, res) => {
   try {
@@ -31,6 +32,10 @@ exports.register = async (req, res) => {
       email,
       hashedPassword,
     ]);
+    await addWelcomeEmailJob({
+      name,
+      email
+    });
     return res.status(201).json({
       success: true,
       message: "User Registered",
